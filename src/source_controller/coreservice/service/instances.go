@@ -78,6 +78,23 @@ func (s *coreService) SearchModelInstances(ctx *rest.Contexts) {
 	ctx.RespEntity(dataResult)
 }
 
+func (s *coreService) SearchModelInstanceMultiCondition(ctx *rest.Contexts) {
+	inputData := metadata.InstSearchMultiConditionParam{}
+	if err := ctx.DecodeInto(&inputData); nil != err {
+		ctx.RespAutoError(err)
+		return
+	}
+
+	dataResult, err := s.core.InstanceOperation().SearchModelInstanceMultiCondition(ctx.Kit, inputData)
+	if err != nil {
+		ctx.RespEntityWithError(dataResult, err)
+		return
+	}
+
+	ctx.RespEntity(dataResult)
+
+}
+
 func (s *coreService) DeleteModelInstances(ctx *rest.Contexts) {
 	inputData := metadata.DeleteOption{}
 	if err := ctx.DecodeInto(&inputData); nil != err {

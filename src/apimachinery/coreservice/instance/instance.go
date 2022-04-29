@@ -32,6 +32,7 @@ type InstanceClientInterface interface {
 	// ReadInstanceStruct 按照结构体返回实例数据
 	ReadInstanceStruct(ctx context.Context, h http.Header, objID string, input *metadata.QueryCondition,
 		result interface{}) (err errors.CCErrorCoder)
+	ReadInstanceMultiCondition(ctx context.Context, h http.Header, input *metadata.InstSearchMultiConditionParam) (resp *metadata.QueryConditionResult, err error)
 }
 
 func NewInstanceClientInterface(client rest.ClientInterface) InstanceClientInterface {

@@ -142,3 +142,17 @@ func (inst *instance) ReadInstanceStruct(ctx context.Context, h http.Header, obj
 
 	return nil
 }
+
+func (inst *instance) ReadInstanceMultiCondition(ctx context.Context, h http.Header, input *metadata.InstSearchMultiConditionParam) (resp *metadata.QueryConditionResult, err error) {
+	resp = new(metadata.QueryConditionResult)
+	subPath := "/read/model/instances/multiple/condition"
+
+	err = inst.client.Post().
+		WithContext(ctx).
+		Body(input).
+		SubResourcef(subPath).
+		WithHeaders(h).
+		Do().
+		Into(resp)
+	return
+}
