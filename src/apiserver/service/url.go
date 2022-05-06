@@ -13,13 +13,15 @@
 package service
 
 import (
+	"bytes"
+	"configcenter/src/apiserver/service/match"
+	"configcenter/src/common/json"
 	"errors"
 	"fmt"
+	"github.com/emicklei/go-restful"
+	"io/ioutil"
 	"regexp"
 	"strings"
-
-	"configcenter/src/apiserver/service/match"
-	"github.com/emicklei/go-restful"
 )
 
 // URLPath url path filter
@@ -29,7 +31,10 @@ type URLPath string
 func (u URLPath) FilterChain(req *restful.Request) (RequestType, error) {
 	var serverType RequestType
 	var err error
-
+	err = u.UrlTransfer(req)
+	if err != nil {
+		return UnknownType, err
+	}
 	switch {
 	case u.WithCache(req):
 		serverType = CacheType
@@ -407,4 +412,226 @@ func (u *URLPath) WithCache(req *restful.Request) (isHit bool) {
 		return true
 	}
 	return false
+}
+
+type ObjIdParam struct {
+	BkObjId string `json:"bk_obj_id"`
+}
+
+type ObjInstIdParam struct {
+	BkObjId  string `json:"bk_obj_id"`
+	BkInstId int    `json:"bk_inst_id"`
+}
+
+type AsstIdParam struct {
+	Id int `json:"id"`
+}
+
+func (u *URLPath) UrlTransfer(req *restful.Request) error {
+
+	body, err := ioutil.ReadAll(req.Request.Body)
+	req.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	req.Request.Body.Close()
+	if err != nil {
+		err = errors.New("read request body failed")
+		return err
+	}
+	switch *u {
+	case "/api/v3/cc/search_inst/":
+		/*
+		  name: search_inst
+		  label: 根据关联关系实例查询模型实例
+		  label_en: search insts by condition
+		  suggest_method: POST
+		  api_type: query
+		*/
+		ObjId := new(ObjIdParam)
+		err = json.Unmarshal(body, &ObjId)
+		if err != nil {
+			err = errors.New("request body cannot be empty")
+			return err
+		}
+		*u = "/api/v3/find/instassociation/object"
+		req.Request.RequestURI = "/api/v3/find/instassociation/object/" + ObjId.BkObjId
+		req.Request.URL.Path = "/api/v3/find/instassociation/object/" + ObjId.BkObjId
+
+	case "/api/v3/cc/create_inst/":
+		/*
+		  name: create_inst
+		  label: 创建实例
+		  label_en: create a new inst
+		  suggest_method: POST
+		  api_type: operate
+		*/
+		ObjId := new(ObjIdParam)
+		err = json.Unmarshal(body, &ObjId)
+		if err != nil {
+			err = errors.New("request body cannot be empty")
+			return err
+		}
+		*u = "/api/v3/create/instance/object"
+		req.Request.RequestURI = "/api/v3/create/instance/object/" + ObjId.BkObjId
+		req.Request.URL.Path = "/api/v3/create/instance/object/" + ObjId.BkObjId
+
+	case "/api/v3/cc/update_inst/":
+		/*
+		  name: update_inst
+		  label: 更新对象实例
+		  label_en: update a inst
+		  suggest_method: POST
+		  api_type: operate
+		*/
+		ObjInstId := new(ObjInstIdParam)
+		err = json.Unmarshal(body, &ObjInstId)
+		if err != nil {
+			err = errors.New("request body cannot be empty")
+			return err
+		}
+		*u = "/api/v3/update/instance/object"
+		req.Request.RequestURI = fmt.Sprintf("/api/v3/update/instance/object/%s/inst/%d", ObjInstId.BkObjId, ObjInstId.BkInstId)
+		req.Request.URL.Path = fmt.Sprintf("/api/v3/update/instance/object/%s/inst/%d", ObjInstId.BkObjId, ObjInstId.BkInstId)
+
+	case "/api/v3/cc/batch_update_inst/":
+		/*
+		  name: batch_update_inst
+		  label: 批量更新对象实例
+		  label_en: update inst batch
+		  suggest_method: POST
+		  api_type: operate
+		*/
+		ObjId := new(ObjIdParam)
+		err = json.Unmarshal(body, &ObjId)
+		if err != nil {
+			err = errors.New("request body cannot be empty")
+			return err
+		}
+		*u = "/api/v3/updatemany/instance/object"
+		req.Request.RequestURI = "/api/v3/updatemany/instance/object/" + ObjId.BkObjId
+		req.Request.URL.Path = "/api/v3/updatemany/instance/object/" + ObjId.BkObjId
+
+	case "/api/v3/cc/delete_inst/":
+		/*
+		  name: delete_inst
+		  label: 删除实例
+		  label_en: delete a inst
+		  suggest_method: POST
+		  api_type: operate
+		*/
+		ObjInstId := new(ObjInstIdParam)
+		err = json.Unmarshal(body, &ObjInstId)
+		if err != nil {
+			err = errors.New("request body cannot be empty")
+			return err
+		}
+		*u = "/api/v3/delete/instance/object"
+		req.Request.RequestURI = fmt.Sprintf("/api/v3/delete/instance/object/%s/inst/%d", ObjInstId.BkObjId, ObjInstId.BkInstId)
+		req.Request.URL.Path = fmt.Sprintf("/api/v3/delete/instance/object/%s/inst/%d", ObjInstId.BkObjId, ObjInstId.BkInstId)
+
+	case "/api/v3/cc/list_hosts_without_biz/":
+		/*
+		  name: list_hosts_without_biz
+		  label: 没有业务ID的主机查询
+		  label_en: list host without business id
+		  suggest_method: POST
+		  api_type: operate
+		*/
+		*u = "/api/v3/hosts/list_hosts_without_app"
+		req.Request.RequestURI = "/api/v3/hosts/list_hosts_without_app"
+		req.Request.URL.Path = "/api/v3/hosts/list_hosts_without_app"
+
+	case "/api/v3/cc/batch_update_host/":
+		/*
+		  name: batch_update_host
+		  label: 批量更新主机属性
+		  label_en: update host batch
+		  suggest_method: POST
+		  api_type: operate
+		*/
+		*u = "/api/v3/hosts/property/batch"
+		req.Request.RequestURI = "/api/v3/hosts/property/batch"
+		req.Request.URL.Path = "/api/v3/hosts/property/batch"
+
+	case "/api/v3/cc/search_hostidentifier/":
+		/*
+		  name: search_hostidentifier
+		  label: 根据条件查询主机身份
+		  label_en: search host identifier
+		  suggest_method: POST
+		  api_type: query
+		*/
+		*u = "/api/v3/identifier/host/search"
+		req.Request.RequestURI = "/api/v3/identifier/host/search"
+		req.Request.URL.Path = "/api/v3/identifier/host/search"
+
+	case "/api/v3/cc/find_instance_association/":
+		/*
+		  name: find_instance_association
+		  label: 查询模型实例之间的关联关系
+		  label_en: find association between object's instance
+		  suggest_method: POST
+		  api_type: query
+		*/
+		*u = "/api/v3/find/instassociation"
+		req.Request.RequestURI = "/api/v3/find/instassociation"
+		req.Request.URL.Path = "/api/v3/find/instassociation"
+
+	case "/api/v3/cc/add_instance_association/":
+		/*
+		  name: add_instance_association
+		  label: 新建模型实例之间的关联关系
+		  label_en: add association between object's instance
+		  suggest_method: POST
+		  api_type: query
+		*/
+		*u = "/api/v3/create/instassociation"
+		req.Request.RequestURI = "/api/v3/create/instassociation"
+		req.Request.URL.Path = "/api/v3/create/instassociation"
+
+	case "/api/v3/cc/delete_instance_association/":
+		/*
+		  name: delete_instance_association
+		  label: 删除模型实例之间的关联关系
+		  label_en: delete association between object's instance
+		  suggest_method: DELETE
+		  api_type: query
+		*/
+		Id := new(AsstIdParam)
+		err = json.Unmarshal(body, &Id)
+		if err != nil {
+			err = errors.New("request body cannot be empty")
+			return err
+		}
+		*u = "/api/v3/delete/instassociation"
+		req.Request.RequestURI = fmt.Sprintf("/api/v3/delete/instassociation/%d", Id.Id)
+		req.Request.URL.Path = fmt.Sprintf("/api/v3/delete/instassociation/%d", Id.Id)
+
+	case "/api/v3/cc/search_related_inst_asso/":
+		/*
+		  name: search_related_inst_asso
+		  label: 查询某实例所有的关联关系（包含其作为关联关系原模型和关联关系目标模型的情况）
+		  label_en: search a instance's all associations, including associations which is self associated or being associated
+		  suggest_method: POST
+		  api_type: query
+		*/
+		*u = "/api/v3/find/instassociation/related"
+		req.Request.RequestURI = "/api/v3/find/instassociation/related"
+		req.Request.URL.Path = "/api/v3/find/instassociation/related"
+
+	case "/api/v3/cc/delete_related_inst_asso/":
+		/*
+		  name: delete_related_inst_asso
+		  label: 删除某实例所有的关联关系（包含其作为关联关系原模型和关联关系目标模型的情况）
+		  label_en: delete all associations of an instance (including cases that the instance is the association source  and it is the Association target)
+		  suggest_method: POST
+		  api_type: query
+		*/
+		*u = "/api/v3/delete/instassociation/batch"
+		req.Request.RequestURI = "/api/v3/delete/instassociation/batch"
+		req.Request.URL.Path = "/api/v3/delete/instassociation/batch"
+
+	default:
+		return nil
+	}
+
+	return nil
 }
