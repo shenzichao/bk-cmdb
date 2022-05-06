@@ -93,3 +93,20 @@ func (s *coreService) CascadeDeleteModelInstances(ctx *rest.Contexts) {
 	}
 	ctx.RespEntityWithError(s.core.InstanceOperation().CascadeDeleteModelInstance(ctx.Kit, ctx.Request.PathParameter("bk_obj_id"), inputData))
 }
+
+func (s *coreService) SearchModelInstanceMultiCondition(ctx *rest.Contexts) {
+	inputData := metadata.InstSearchMultiConditionParam{}
+	if err := ctx.DecodeInto(&inputData); nil != err {
+		ctx.RespAutoError(err)
+		return
+	}
+
+	dataResult, err := s.core.InstanceOperation().SearchModelInstanceMultiCondition(ctx.Kit, inputData)
+	if err != nil {
+		ctx.RespEntityWithError(dataResult, err)
+		return
+	}
+
+	ctx.RespEntity(dataResult)
+
+}

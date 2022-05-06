@@ -113,6 +113,9 @@ func (s *Service) initInst(web *restful.WebService) {
 	utility.AddHandler(rest.Action{Verb: http.MethodPost, Path: "/inst/search/{owner_id}/{bk_obj_id}", Handler: s.SearchInsts})
 	utility.AddHandler(rest.Action{Verb: http.MethodPost, Path: "/findmany/inst/association/object/{bk_obj_id}/inst_id/{id}/offset/{start}/limit/{limit}/web", Handler: s.SearchInstAssociationUI})
 	utility.AddHandler(rest.Action{Verb: http.MethodPost, Path: "/findmany/inst/association/association_object/inst_base_info", Handler: s.SearchInstAssociationWithOtherObject})
+	utility.AddHandler(rest.Action{Verb: http.MethodPost,
+		Path:    "/search/instance",
+		Handler: s.SearchInstMultiCondition})
 
 	utility.AddToRestfulWebService(web)
 }

@@ -475,6 +475,35 @@ func (s *Service) SearchInsts(ctx *rest.Contexts) {
 	ctx.RespEntity(result)
 }
 
+//SearchInstMultiCondition  support multiple condition
+func (s *Service) SearchInstMultiCondition(ctx *rest.Contexts) {
+	parameter := &metadata.InstSearchMultiConditionParam{}
+	if err := ctx.DecodeInto(&parameter); err != nil {
+		ctx.RespAutoError(err)
+		return
+	}
+
+	rid := ctx.Kit.Rid
+	defErr := ctx.Kit.CCError
+	if key, err := parameter.Validate(); err != nil {
+		blog.ErrorJSON("SearchInstMultiCondition failed, decode body failed, parameter: %s, err:%v. rid:%s", parameter, err, rid)
+		ccErr := defErr.CCErrorf(common.CCErrCommParamsInvalid, key)
+		ctx.RespAutoError(ccErr)
+		return
+	}
+
+	ctx.SetReadPreference(common.SecondaryPreferredMode)
+
+	result, err := s.Core.InstOperation().FindInstMultiCondition(ctx.Kit, parameter)
+	if err != nil {
+		blog.Errorf("[api-inst] failed to find the objects(%s), error info is %s, rid: %s", parameter.ObjID, err.Error(), ctx.Kit.Rid)
+		ctx.RespAutoError(err)
+		return
+	}
+
+	ctx.RespEntity(result)
+}
+
 // SearchInstAndAssociationDetail search the inst with association details
 func (s *Service) SearchInstAndAssociationDetail(ctx *rest.Contexts) {
 	objID := ctx.Request.PathParameter("bk_obj_id")

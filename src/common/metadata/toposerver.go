@@ -16,6 +16,9 @@ import (
 	"configcenter/src/common"
 	"configcenter/src/common/errors"
 	"configcenter/src/common/mapstr"
+	"configcenter/src/common/querybuilder"
+	"context"
+	"fmt"
 )
 
 type SearchInstResult struct {
@@ -139,4 +142,44 @@ type ModuleTopo struct {
 type SearchBriefBizTopoResult struct {
 	BaseResp `json:",inline"`
 	Data     []*SetTopo
+}
+
+type InstSearchMultiConditionParam struct {
+	ObjID              string                    `json:"bk_obj_id"`
+	Page               BasePage                  `json:"page"`
+	Fields             []string                  `json:"fields"`
+	InstPropertyFilter *querybuilder.QueryFilter `json:"filter"`
+}
+
+func (option InstSearchMultiConditionParam) Validate() (string, error) {
+	if key, err := option.Page.Validate(false); err != nil {
+		return fmt.Sprintf("page.%s", key), err
+	}
+
+	if option.InstPropertyFilter != nil {
+		if key, err := option.InstPropertyFilter.Validate(); err != nil {
+			return fmt.Sprintf("filter.%s", key), err
+		}
+		if option.InstPropertyFilter.GetDeep() > querybuilder.MaxDeep {
+			return "filter.rules", fmt.Errorf("exceed max query condition deepth: %d", querybuilder.MaxDeep)
+		}
+	}
+
+	return "", nil
+}
+
+func (option InstSearchMultiConditionParam) GetInstPropertyFilter(ctx context.Context) (map[string]interface{}, error) {
+	if option.InstPropertyFilter != nil {
+		mgoFilter, key, err := option.InstPropertyFilter.ToMgo()
+		if err != nil {
+			return nil, fmt.Errorf("invalid key:inst_property_filter.%s, err: %s", key, err)
+		}
+		return mgoFilter, nil
+	}
+	return make(map[string]interface{}), nil
+}
+
+type InstSearchMultiConditionResult struct {
+	Count int             `json:"count"`
+	Info  []mapstr.MapStr `json:"info"`
 }

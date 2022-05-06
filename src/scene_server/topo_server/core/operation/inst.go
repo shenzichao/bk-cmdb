@@ -49,6 +49,7 @@ type InstOperationInterface interface {
 	FindInstParentTopo(kit *rest.Kit, obj model.Object, instID int64, query *metadata.QueryInput) (count int, results []*CommonInstTopo, err error)
 	FindInstTopo(kit *rest.Kit, obj model.Object, instID int64, query *metadata.QueryInput) (count int, results []CommonInstTopoV2, err error)
 	UpdateInst(kit *rest.Kit, data mapstr.MapStr, obj model.Object, cond condition.Condition, instID int64) error
+	FindInstMultiCondition(kit *rest.Kit, param *metadata.InstSearchMultiConditionParam) (*metadata.InstSearchMultiConditionResult, error)
 
 	SetProxy(modelFactory model.Factory, instFactory inst.Factory, asst AssociationOperationInterface, obj ObjectOperationInterface)
 }
@@ -1008,6 +1009,42 @@ func (c *commonInst) FindInstTopo(kit *rest.Kit, obj model.Object, instID int64,
 	}
 
 	return len(results), results, nil
+}
+
+func (c *commonInst) FindInstMultiCondition(kit *rest.Kit, param *metadata.InstSearchMultiConditionParam) (*metadata.InstSearchMultiConditionResult, error) {
+
+	objID := param.ObjID
+	switch objID {
+	case common.BKInnerObjIDHost:
+		param.Page.Sort = common.BKHostIDField
+		hostParam := &metadata.ListHosts{
+			HostPropertyFilter: param.InstPropertyFilter,
+			Fields:             param.Fields,
+			Page:               param.Page,
+		}
+		host, err := c.clientSet.CoreService().Host().ListHosts(kit.Ctx, kit.Header, hostParam)
+		if err != nil {
+			blog.Errorf("find host failed, err: %s, input:%#v, rid:%s", err.Error(), hostParam, kit.Rid)
+			return nil, kit.CCError.Error(common.CCErrHostGetFail)
+		}
+		hostInfo := make([]mapstr.MapStr, len(host.Info))
+		for index, host := range host.Info {
+			hostInfo[index] = host
+		}
+		return &metadata.InstSearchMultiConditionResult{Info: hostInfo, Count: host.Count}, nil
+	default:
+		param.Page.Sort = common.BKInstIDField
+		rsp, err := c.clientSet.CoreService().Instance().ReadInstanceMultiCondition(kit.Ctx, kit.Header, param)
+		if nil != err {
+			blog.Errorf("[operation-inst] failed to request object controller, err: %s, rid: %s", err.Error(), kit.Rid)
+			return nil, kit.CCError.Error(common.CCErrCommHTTPDoRequestFailed)
+		}
+
+		if !rsp.Result {
+			return nil, kit.CCError.New(rsp.Code, rsp.ErrMsg)
+		}
+		return &metadata.InstSearchMultiConditionResult{Info: rsp.Data.Info, Count: rsp.Data.Count}, nil
+	}
 }
 
 func (c *commonInst) FindInstByAssociationInst(kit *rest.Kit, objID string, asstParamCond *AssociationParams) (*metadata.InstResult, error) {

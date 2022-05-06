@@ -100,6 +100,7 @@ func (s *coreService) initModelInstances(web *restful.WebService) {
 	utility.AddHandler(rest.Action{Verb: http.MethodPost, Path: "/read/model/{bk_obj_id}/instances", Handler: s.SearchModelInstances})
 	utility.AddHandler(rest.Action{Verb: http.MethodDelete, Path: "/delete/model/{bk_obj_id}/instance", Handler: s.DeleteModelInstances})
 	utility.AddHandler(rest.Action{Verb: http.MethodDelete, Path: "/delete/model/{bk_obj_id}/instance/cascade", Handler: s.CascadeDeleteModelInstances})
+	utility.AddHandler(rest.Action{Verb: http.MethodPost, Path: "/read/model/instances/multiple/condition", Handler: s.SearchModelInstanceMultiCondition})
 
 	utility.AddToRestfulWebService(web)
 }

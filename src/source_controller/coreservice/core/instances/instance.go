@@ -416,6 +416,76 @@ func (m *instanceManager) SearchModelInstance(kit *rest.Kit, objID string, input
 	return dataResult, nil
 }
 
+func (m *instanceManager) SearchModelInstanceMultiCondition(kit *rest.Kit, inputParam metadata.InstSearchMultiConditionParam) (*metadata.InstSearchMultiConditionResult, error) {
+	rid := kit.Rid
+
+	if key, err := inputParam.Validate(); err != nil {
+		blog.Errorf("SearchModelInstanceMultiCondition failed, invalid parameters, key: %s, err: %s, rid: %s", key, err.Error(), rid)
+		return nil, err
+	}
+
+	propertyFilter, err := inputParam.GetInstPropertyFilter(kit.Ctx)
+	if err != nil {
+		blog.Errorf("SearchModelInstanceMultiCondition failed, db select failed, filter: %+v, err: %+v, rid: %s", propertyFilter, err, rid)
+		return nil, err
+	}
+
+	filters := make([]map[string]interface{}, 0)
+	if len(propertyFilter) > 0 {
+		filters = append(filters, propertyFilter)
+	}
+
+	finalFilter := map[string]interface{}{}
+
+	var targetTableName string
+	var defaultSortField string
+
+	switch inputParam.ObjID {
+	case "set":
+		targetTableName = common.BKTableNameBaseSet
+		defaultSortField = common.BKSetIDField
+	case "module":
+		targetTableName = common.BKTableNameBaseModule
+		defaultSortField = common.BKModuleIDField
+	default:
+		targetTableName = common.BKTableNameBaseInst
+		defaultSortField = common.BKInstIDField
+		finalFilter[common.BKObjIDField] = inputParam.ObjID
+
+	}
+
+	if len(filters) > 0 {
+		finalFilter[common.BKDBAND] = filters
+	}
+
+	total, err := mongodb.Client().Table(targetTableName).Find(finalFilter).Count(kit.Ctx)
+	if err != nil {
+		blog.Errorf("SearchModelInstanceMultiCondition failed, db select failed, filter: %+v, err: %+v, rid: %s", finalFilter, err, rid)
+		return nil, err
+	}
+
+	result := &metadata.InstSearchMultiConditionResult{}
+	result.Count = int(total)
+
+	limit := uint64(inputParam.Page.Limit)
+	start := uint64(inputParam.Page.Start)
+	query := mongodb.Client().Table(targetTableName).Find(finalFilter).Limit(limit).Start(start).Fields(inputParam.Fields...)
+	if len(inputParam.Page.Sort) > 0 {
+		query = query.Sort(inputParam.Page.Sort)
+	} else {
+		query = query.Sort(defaultSortField)
+	}
+	instItems := make([]mapstr.MapStr, 0)
+	queryErr := query.All(kit.Ctx, &instItems)
+	if queryErr != nil {
+		return nil, queryErr
+	}
+
+	result.Info = instItems
+
+	return result, nil
+}
+
 func (m *instanceManager) DeleteModelInstance(kit *rest.Kit, objID string, inputParam metadata.DeleteOption) (*metadata.DeletedCount, error) {
 	tableName := common.GetInstTableName(objID)
 	instIDFieldName := common.GetInstIDField(objID)

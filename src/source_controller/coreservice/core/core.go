@@ -90,6 +90,7 @@ type InstanceOperation interface {
 	SearchModelInstance(kit *rest.Kit, objID string, inputParam metadata.QueryCondition) (*metadata.QueryResult, error)
 	DeleteModelInstance(kit *rest.Kit, objID string, inputParam metadata.DeleteOption) (*metadata.DeletedCount, error)
 	CascadeDeleteModelInstance(kit *rest.Kit, objID string, inputParam metadata.DeleteOption) (*metadata.DeletedCount, error)
+	SearchModelInstanceMultiCondition(kit *rest.Kit, inputParam metadata.InstSearchMultiConditionParam) (*metadata.InstSearchMultiConditionResult, error)
 }
 
 // AssociationKind association kind methods
